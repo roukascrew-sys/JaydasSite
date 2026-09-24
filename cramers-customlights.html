@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-7Av2XuffLTZ06KXjoXS276BOyIPpYN8PM6wGyPwvueo=' 'sha256-7zXitzofu8v/w5TLPVKhfWPNIzaX0QO8GhZ7Q9PeQ84=' 'sha256-ugxstSlRfX4oba3NaNN/9SIKpjjkrCzX/LMWquWAkk0=' 'sha256-OQ/f0wJkE2lZEhOhSn3dyPCKgL+K12i6J8YLvkjj7kE=' 'sha256-gRadqG/G0Y9HnLzWytyKawRmcZhV0zKWJGpgK0m6bng=' 'sha256-lSj1c3uVAtqcj61Qcagu2RN7AStGyWXJ5EfQz5iZq5Q=' 'sha256-diCiQ9UDPw2h/pYUpJgT1W8e4ALXVGwEnpZFo6nRRnA=' 'sha256-TeeEIpe8+VSOJHlHFVZ24U+pwlALxmiLjkYD1tLzNNI=' 'sha256-sRgWNNcRU1TMTLx9DVyv5BpznrCNWg7AWnDtJWlGO+8='; style-src 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-7Av2XuffLTZ06KXjoXS276BOyIPpYN8PM6wGyPwvueo=' 'sha256-18///QoVbBCPeSzbxW0acHRvbdmKSWU/tP/zKWaKar8=' 'sha256-ugxstSlRfX4oba3NaNN/9SIKpjjkrCzX/LMWquWAkk0=' 'sha256-OQ/f0wJkE2lZEhOhSn3dyPCKgL+K12i6J8YLvkjj7kE=' 'sha256-gRadqG/G0Y9HnLzWytyKawRmcZhV0zKWJGpgK0m6bng=' 'sha256-lSj1c3uVAtqcj61Qcagu2RN7AStGyWXJ5EfQz5iZq5Q=' 'sha256-diCiQ9UDPw2h/pYUpJgT1W8e4ALXVGwEnpZFo6nRRnA=' 'sha256-TeeEIpe8+VSOJHlHFVZ24U+pwlALxmiLjkYD1tLzNNI=' 'sha256-sRgWNNcRU1TMTLx9DVyv5BpznrCNWg7AWnDtJWlGO+8='; style-src 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cramers Customlights — Star lighting for your vehicle</title>
@@ -574,7 +574,7 @@ if ("IntersectionObserver" in window){
 }
 $("#year").textContent = new Date().getFullYear();
 $("#socialLine").textContent = CONFIG.social;
-$("#heroCall").href = telLink(CONFIG.people[0].phone);
+document.querySelectorAll(".hero a[href^='tel:']").forEach(a => { a.href = telLink(CONFIG.people[0].phone); });
 $("#build").innerHTML = `<div class="yr">${esc(CONFIG.build.year)}</div><div class="model">${esc(CONFIG.build.model)}</div>`;
 $("#checks").innerHTML = CONFIG.checks.map(c => `<li>${spark()}${esc(c)}</li>`).join("");
 $("#serviceList").innerHTML = CONFIG.services.map(s =>
@@ -859,7 +859,8 @@ try { (function init3D(){
   headliner.position.set(-.15,1.33,0); car.add(headliner);
 
   let starPts, starBase = [];
-  const starMat = new THREE.PointsMaterial({ size:.03, vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending });
+  // Round soft texture so stars read as points of light, not squares, up close
+  const starMat = new THREE.PointsMaterial({ size:.03, map:glowTexture(), vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending });
   function makeHeadliner(n){
     if (starPts) { car.remove(starPts); starPts.geometry.dispose(); }
     const pos=[], col=[]; starBase=[];
@@ -946,7 +947,7 @@ try { (function init3D(){
 
   const target=new THREE.Vector3(0,.62,0), outPos=new THREE.Vector3(), inPos=new THREE.Vector3(.05,1.02,.32), look=new THREE.Vector3();
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const tmpC = new THREE.Color();
+  const tmpC = new THREE.Color(), starC = new THREE.Color();
 
   applyScene = function(){
     starPts.visible = V.stars; intLine.visible = V.interior; under.visible = V.under;
@@ -977,12 +978,12 @@ try { (function init3D(){
     const col = starPts.geometry.attributes.color;
     for(let i=0;i<starBase.length;i++){
       const s=starBase[i], b = motionPaused ? .9 : .35 + .65*Math.abs(Math.sin(t*s.sp+s.ph));
-      if (cycling){ const c=new THREE.Color().setHSL(((hue+s.t*120)%360)/360,.95,.7); col.setXYZ(i,c.r*b,c.g*b,c.b*b); }
+      if (cycling){ const c=starC.setHSL(((hue+s.t*120)%360)/360,.95,.7); col.setXYZ(i,c.r*b,c.g*b,c.b*b); }
       else col.setXYZ(i,base.r*b,base.g*b,base.b*b);
     }
     col.needsUpdate = true;
-    // headliner stars look bigger up close
-    starMat.size = .03 + cam.blend*.012;
+    // size is in world units, so shrink them inside where the camera is ~0.3 away
+    starMat.size = .03 - cam.blend*.016;
     reflGroup.visible = cam.blend < .5; floor.visible = cam.blend < .9;
 
     composer ? composer.render() : renderer.render(scene, camera);
